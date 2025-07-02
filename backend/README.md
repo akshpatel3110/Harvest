@@ -1,109 +1,90 @@
-Fruit Size Prediction Backend
+Backend Service README - Cloud Run + Cloud SQL (PostgreSQL) Setup
+================================================================
 
-This is a Flask backend API for predicting fruit sizes based on growth rates and historical fruit data stored in a PostgreSQL database.
+Overview
+--------
+This backend service is built with Flask and connects to a PostgreSQL database hosted on Google Cloud SQL.
+It is containerized using Docker and deployed to Google Cloud Run.
 
----
+Prerequisites
+-------------
+- Google Cloud Project with Cloud Run and Cloud SQL Admin APIs enabled.
+- A running Cloud SQL PostgreSQL instance.
+- Google Cloud SDK (gcloud) installed and authenticated.
+- Docker installed for building images.
 
-Features
+Step 1: Create & Configure Cloud SQL PostgreSQL Instance
+--------------------------------------------------------
+1. Go to Google Cloud Console > SQL > Create Instance > Choose PostgreSQL.
+2. Set instance ID (e.g., fruit-db), set password for 'postgres' user, select region.
+3. Wait for the instance to initialize.
+4. Note the Instance Connection Name (format: project-id:region:instance-name).
+5. (Optional) Enable Public IP or set up VPC for private connections.
+6. Configure Cloud Run access via Cloud SQL Proxy (recommended).
 
-- Connects to PostgreSQL via IP or Cloud SQL socket.
-- Calculates predicted fruit diameter growth over days.
-- Returns average predicted diameter and a histogram of size distribution.
-- CORS enabled for frontend communication.
+Step 2: Initialize Database
+---------------------------
+1. Connect to the instance:
+   gcloud sql connect fruit-db --user=postgres --region=us-central1
+2. Create your database and table(s):
+   Example SQL:
+     CREATE DATABASE fruit_db;
+     \c fruit_db
+     CREATE TABLE fruits (
+       id SERIAL PRIMARY KEY,
+       major_mm FLOAT,
+       minor_mm FLOAT,
+       subminor_mm FLOAT
+     );
+3. Insert sample data as needed:
+     INSERT INTO fruits (major_mm, minor_mm, subminor_mm) VALUES (75, 70, 72);
 
----
+Step 3: Set Environment Variables in Cloud Run
+----------------------------------------------
+- DB_NAME=fruit_db
+- DB_USER=postgres
+- DB_PASSWORD=your_db_password
+- INSTANCE_CONNECTION_NAME=project-id:region:instance-name
 
-Requirements
+Step 4: Build and Push Docker Image
+-----------------------------------
+Run in backend folder:
+  docker build -t gcr.io/<PROJECT-ID>/fruit-backend-service .
+  docker push gcr.io/<PROJECT-ID>/fruit-backend-service
 
-- Python 3.8+
-- PostgreSQL instance with a `fruits` table containing columns: `major_mm`, `minor_mm`, `subminor_mm`.
-- `pip` for installing Python dependencies.
+Step 5: Deploy to Cloud Run
+---------------------------
+gcloud run deploy fruit-backend-service \
+  --image gcr.io/<PROJECT-ID>/fruit-backend-service \
+  --platform managed \
+  --region us-central1 \
+  --allow-unauthenticated \
+  --add-cloudsql-instances <INSTANCE_CONNECTION_NAME> \
+  --set-env-vars DB_NAME=fruit_db,DB_USER=postgres,DB_PASSWORD=<YOUR_DB_PASSWORD>,INSTANCE_CONNECTION_NAME=<INSTANCE_CONNECTION_NAME>
 
----
+Replace placeholders accordingly.
 
-Setup Instructions
+Step 6: Test Your Deployment
+----------------------------
+Send POST request to:
+  https://<your-cloud-run-url>/predict
 
-1. Clone the repository
+Example JSON payload:
+{
+  "scan_date": "2025-07-01",
+  "harvest_date": "2025-07-10",
+  "growth_rate": 0.5,
+  "min_diameter": 70,
+  "max_diameter": 85
+}
 
-git clone <repository-url>
-cd <repository-folder>
-
-2. Create a virtual environment and activate it
-
-python3 -m venv venv
-source venv/bin/activate    # Linux/macOS
-venv\Scripts\activate       # Windows
-
-3. Install dependencies
-
-pip install -r requirements.txt
-
----
-
-Configuration
-
-The app reads database connection settings from environment variables.
-
-Variable               | Description                                  | Example
------------------------|----------------------------------------------|--------------------------------------
-DB_HOST                | PostgreSQL server IP (optional if using socket) | 34.122.198.27
-DB_NAME                | PostgreSQL database name                      | fruit-db
-DB_USER                | PostgreSQL username                           | postgres
-DB_PASSWORD            | PostgreSQL password                           | yourpassword
-INSTANCE_CONNECTION_NAME| Cloud SQL instance connection name for socket (optional) | project:region:instance
-
-If INSTANCE_CONNECTION_NAME is set, the app connects via Cloud SQL socket. Otherwise, it uses DB_HOST.
-
----
-
-Running Locally
-
-Make sure PostgreSQL is reachable and environment variables are set.
-
-Example on Linux/macOS:
-
-export DB_HOST=34.122.198.27
-export DB_NAME=fruit-db
-export DB_USER=postgres
-export DB_PASSWORD=yourpassword
-# Optionally, unset INSTANCE_CONNECTION_NAME if not using Cloud Run socket:
-unset INSTANCE_CONNECTION_NAME
-
-python app.py
-
-The API will run on http://localhost:8080.
-
----
-
-Docker Usage
-
-Build the Docker image:
-
-docker build -t fruit-backend .
-
-Run the container:
-
-docker run -p 8080:8080 \
-  -e DB_HOST=34.122.198.27 \
-  -e DB_NAME=fruit-db \
-  -e DB_USER=postgres \
-  -e DB_PASSWORD=yourpassword \
-  fruit-backend
+Additional Notes
+----------------
+- Ensure Cloud Run service account has 'Cloud SQL Client' IAM role.
+- Use environment variables to secure sensitive info.
+- For local testing, use Cloud SQL Proxy.
 
 ---
 
-Deploying to Google Cloud Run
-
-1. Set the required environment variables in Cloud Run:
-
-Name                  | Value
------------------------|-------------------------------
-DB_NAME                | fruit-db
-DB_USER                | postgres
-DB_PASSWORD            | Your database password
-INSTANCE_CONNECTION_NAME| project:region:instance (Cloud SQL instance connection name)
-
-2. Deploy your container with these environment variables configured.
-
-3. Cloud Run will connect to Cloud SQL securely via the Unix socket.
+Thank you for using this backend service!
 
