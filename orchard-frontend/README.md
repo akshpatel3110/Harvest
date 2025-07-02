@@ -1,70 +1,79 @@
-# Getting Started with Create React App
+FrontEnd Deployment on Google Cloud Run
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+This README explains how to deploy your frontend application to Google Cloud Run using your existing Dockerfile.
 
-## Available Scripts
+---
 
-In the project directory, you can run:
+Prerequisites
 
-### `npm start`
+- Google Cloud SDK (gcloud) installed and configured
+- Google Cloud project selected
+- Docker installed (for local image build and push)
+- Dockerfile already present in your project root
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+---
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+Deployment Steps
 
-### `npm test`
+1. Build the Docker image
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+Run the following command from your project directory (where Dockerfile is):
 
-### `npm run build`
+docker build -t gcr.io/[PROJECT-ID]/frontend-app .
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+Replace [PROJECT-ID] with your Google Cloud project ID.
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+---
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+2. Push the image to Google Container Registry
 
-### `npm run eject`
+docker push gcr.io/[PROJECT-ID]/frontend-app
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
+---
 
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+3. Deploy to Cloud Run
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
+Deploy your container image to Cloud Run with this command:
 
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
+gcloud run deploy frontend-service \
+  --image gcr.io/[PROJECT-ID]/frontend-app \
+  --platform managed \
+  --region us-central1 \
+  --allow-unauthenticated \
+  --port 8080
 
-## Learn More
+---
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+4. Access your frontend app
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+After deployment completes, Cloud Run will provide a URL such as:
 
-### Code Splitting
+https://frontend-service-xxxxx.a.run.app
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
+Open the URL in your browser to see your live frontend.
 
-### Analyzing the Bundle Size
+---
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
+Updating the Frontend
 
-### Making a Progressive Web App
+To update your app:
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
+- Make changes locally
+- Rebuild the Docker image
+- Push the new image to Container Registry
+- Redeploy to Cloud Run with the gcloud run deploy command above
 
-### Advanced Configuration
+---
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
+Troubleshooting
 
-### Deployment
+- Check logs:  
+  gcloud run services logs read frontend-service --region us-central1
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
+- Ensure correct project is selected:  
+  gcloud config set project [PROJECT-ID]
 
-### `npm run build` fails to minify
+---
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+Created by Aksh Minesh Patel  
+Date: 2025-07-01
